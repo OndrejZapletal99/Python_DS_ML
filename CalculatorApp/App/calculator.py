@@ -2,14 +2,13 @@ import streamlit as st
 import pandas as pd
 from joblib import load
 
-# --- Nastavení cesty k modelu ---
+# --- Model path setting ---
 model_path = "../Model/final_model_gbm.joblib"
 
-
-# Načtení modelu
+# Load the trained model
 model = load(model_path)
 
-# --- Definice slovníků a možností ---
+# --- Dictionaries and options definition ---
 category_names = {
     "Industrial": ["Fire-rated", "Soundproof", "Thermal-insulated"],
     "Residential": ["Interior", "Exterior", "Balcony"],
@@ -24,7 +23,7 @@ color_options = ['RAL7024', 'RAL7035', 'RAL9005']
 hinge_options = ['Left', 'Right']
 packing_options = ['Wooden box', 'Cardbox']
 
-# --- Sloupce pro DF dle požadavku ---
+# --- Columns for DataFrame as required by the model ---
 target_columns = [
     'Width', 'Height', 'Product_batch', 'Product_costs',
     'Product_type_Door', 'Product_type_Frame',
@@ -49,8 +48,10 @@ target_columns = [
 batch_sizes = [1, 10, 20, 30, 50, 100]
 
 st.title("⚙️ AI-Powered Product Cost Predictor")
-st.write("Leverage intelligent modeling to forecast costs for various production volumes. Just enter your product specs — we’ll do the math.")
-
+st.write(
+    "Leverage intelligent modeling to forecast costs for various production volumes. "
+    "Just enter your product specs — we’ll do the math."
+)
 
 col1, col2, col3 = st.columns(3)
 
@@ -74,7 +75,7 @@ with col3:
     with st.expander('Product Dimension'):
         Width = st.slider('Width (mm):', 614, 750, step=10)
         Height = st.slider('Height (mm):', 1200, 1890, step=10)
-        
+
 if st.button("Calculate Cost"):
     required_fields = [Type, Category, Subcategory, Color, Hinge, Handle, Packing]
     if any(field.startswith("Select") for field in required_fields):
@@ -82,25 +83,25 @@ if st.button("Calculate Cost"):
     else:
         rows = []
         for batch in batch_sizes:
-            # Inicializace řádku s nulami
+            # Initialize a row with zeros for all required columns
             row = {col: 0 for col in target_columns}
 
-            # Vyplnění základních hodnot
+            # Fill in basic numerical and batch size values
             row['Width'] = Width
             row['Height'] = Height
             row['Product_batch'] = batch
-            # Product_costs je predikce, necháme 0 pro teď
+            # Product_costs will be predicted later, so keep 0 for now
 
-            # Typ (Door nebo Frame)
+            # Encode product type (Door or Frame)
             row['Product_type_Door'] = 1 if Type == 'Door' else 0
             row['Product_type_Frame'] = 1 if Type == 'Frame' else 0
 
-            # Kategorie
+            # Encode product category
             for cat in ['Commercial', 'Design', 'Industrial', 'Residential', 'Security']:
                 key = f'Product_category_{cat}'
                 row[key] = 1 if Category == cat else 0
 
-            # Podkategorie
+            # Encode product subcategory
             for subcat in [
                 'Access-controlled', 'Balcony', 'Bulletproof', 'Classic', 'Exterior', 'Fire-rated',
                 'Glass-panel', 'Interior', 'Minimalist', 'Office', 'Reinforced', 'Retail',
@@ -109,21 +110,21 @@ if st.button("Calculate Cost"):
                 key = f'Product_subcategory_{subcat}'
                 row[key] = 1 if Subcategory == subcat else 0
 
-            # Barva
+            # Encode color option
             for col_opt in ['RAL7024', 'RAL7035', 'RAL9005']:
                 key = f'Product_color_{col_opt}'
                 row[key] = 1 if Color == col_opt else 0
 
-            # Handle
+            # Encode handle option
             for handle_opt in ['Aluminum (AL)', 'Plastic (PL)', 'Steel (ST)']:
                 key = f'Product_handle_{handle_opt}'
                 row[key] = 1 if Handle == handle_opt else 0
 
-            # Hinge
+            # Encode hinge side
             row['Product_hinge_Left'] = 1 if Hinge == 'Left' else 0
             row['Product_hinge_Right'] = 1 if Hinge == 'Right' else 0
 
-            # Packing
+            # Encode packing type
             row['Product_packing_Cardbox'] = 1 if Packing == 'Cardbox' else 0
             row['Product_packing_Wooden box'] = 1 if Packing == 'Wooden box' else 0
 
@@ -131,28 +132,28 @@ if st.button("Calculate Cost"):
 
         df = pd.DataFrame(rows)
 
-        # Předpověď nákladů modelem
-        # Model nečeká sloupec Product_costs, takže vynecháme ten sloupec
+        # Predict product costs using the model
+        # The model does not expect the Product_costs column, so drop it before prediction
         X = df.drop(columns=['Product_costs'])
         df['Product_costs'] = model.predict(X)
 
-        # Vytvoření názvu produktu dle logiky:
-        # product_desc = f"{product_type}_{product_category}_{product_subcategory}_{product_color}_{product_handle}_{product_hinge}_{width}x{height}_{product_packing}"
+        # Construct product description string for display
+        # Format: type_category_subcategory_color_handle_hinge_widthxheight_packing
         product_desc = f"{Type}_{Category}_{Subcategory}_{Color}_{Handle}_{Hinge}_{Width}x{Height}_{Packing}"
 
-        # Přidání product_desc jako další sloupec do df
+        # Add product description as a new column in DataFrame
         df['product_desc'] = product_desc
 
-        # Zaokrouhlení sloupce Product_costs na 1 desetinné místo
+        # Round predicted costs to 1 decimal place
         df['Product_costs'] = df['Product_costs'].round(1)
 
-        # Vybereme sloupce v požadovaném pořadí
+        # Select and rename columns for output display
         result_df = df[['product_desc', 'Product_batch', 'Product_costs']].rename(columns={
-    'product_desc': 'Product Description',
-    'Product_batch': 'Production Batch',
-    'Product_costs': 'Costs [€]'
-})
+            'product_desc': 'Product Description',
+            'Product_batch': 'Production Batch',
+            'Product_costs': 'Costs [€]'
+        })
 
-        # Zobrazíme výsledný DataFrame
+        # Display the prediction results table
         st.write("### Prediction Results")
         st.dataframe(result_df)
