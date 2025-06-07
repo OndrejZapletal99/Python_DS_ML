@@ -51,10 +51,11 @@ batch_sizes = [1, 10, 20, 30, 50, 100]
 st.title("⚙️ AI-Powered Product Cost Predictor")
 st.write("Leverage intelligent modeling to forecast costs for various production volumes. Just enter your product specs — we’ll do the math.")
 
-with st.expander('Parameters'):
-    col1, col2, col3 = st.columns(3)
 
-    with col1:
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    with st.expander('Product Type'):
         Type = st.selectbox('Type:', ['Select type...'] + type_options)
         Category = st.selectbox('Category:', ['Select category...'] + list(category_names.keys()))
         if Category != 'Select category...':
@@ -62,16 +63,18 @@ with st.expander('Parameters'):
         else:
             Subcategory = st.selectbox('Subcategory:', ['Select category first...'])
 
-    with col2:
+with col2:
+    with st.expander('Product Attributes'):
         Color = st.selectbox('Color:', ['Select color...'] + color_options)
         Hinge = st.selectbox('Hinge:', ['Select hinge...'] + hinge_options)
         Handle = st.selectbox('Handle:', ['Select handle...'] + handle_options)
-
-    with col3:
-        Width = st.slider('Width (mm):', 614, 750, step=10)
-        Height = st.slider('Height (mm):', 1200, 1890, step=10)
         Packing = st.selectbox('Packing:', ['Select packing...'] + packing_options)
 
+with col3:
+    with st.expander('Product Dimension'):
+        Width = st.slider('Width (mm):', 614, 750, step=10)
+        Height = st.slider('Height (mm):', 1200, 1890, step=10)
+        
 if st.button("Calculate Cost"):
     required_fields = [Type, Category, Subcategory, Color, Hinge, Handle, Packing]
     if any(field.startswith("Select") for field in required_fields):
@@ -140,6 +143,16 @@ if st.button("Calculate Cost"):
         # Přidání product_desc jako další sloupec do df
         df['product_desc'] = product_desc
 
+        # Zaokrouhlení sloupce Product_costs na 1 desetinné místo
+        df['Product_costs'] = df['Product_costs'].round(1)
+
+        # Vybereme sloupce v požadovaném pořadí
+        result_df = df[['product_desc', 'Product_batch', 'Product_costs']].rename(columns={
+    'product_desc': 'Product Description',
+    'Product_batch': 'Production Batch',
+    'Product_costs': 'Costs [€]'
+})
+
         # Zobrazíme výsledný DataFrame
         st.write("### Prediction Results")
-        st.dataframe(df[['Product_batch', 'Product_costs', 'product_desc']])
+        st.dataframe(result_df)
