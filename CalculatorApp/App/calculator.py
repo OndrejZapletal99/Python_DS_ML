@@ -1,9 +1,11 @@
 import streamlit as st
 import pandas as pd
 from joblib import load
+from pathlib import Path
 
 # --- Model path setting ---
-model_path = "./final_model_gbm.joblib"
+script_dir = Path(__file__).parent
+model_path = script_dir / "final_model_gbm.joblib"
 
 
 # Load the trained model
