@@ -3,7 +3,8 @@ import pandas as pd
 from joblib import load
 
 # --- Model path setting ---
-model_path = "../Model/final_model_gbm.joblib"
+model_path = "final_model_gbm.joblib"
+
 
 # Load the trained model
 model = load(model_path)
