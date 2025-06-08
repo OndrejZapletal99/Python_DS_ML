@@ -9,6 +9,7 @@
   - [Flight Price Prediction](#flight-price-prediction)
   - [Health Insurance Analysis](#health-insurance-analysis)
   - [Heart Disease Prediction](#heart-disease-prediction)
+  - [Calculator App](#calculator-app)
 
 ## Introduction
 
@@ -71,3 +72,13 @@ The `Heart Disease Prediction` project predicts the presence of heart disease ba
 - Implementation of classification models for disease prediction.
 - Visualization of feature importance and decision boundaries.
 - Evaluation of model performance using metrics like accuracy, precision, and recall.
+
+## Calculator App
+The `Calculator App` predicts production costs for door and frame products based on user-defined specifications using a trained gradient boosting model.
+
+**Key Features:**
+- Interactive web app built with Streamlit for intuitive user input.
+- Encodes categorical selections (e.g., type, category, color) into model-ready format.
+- Uses a pre-trained LightGBM model to predict costs across various batch sizes.
+- Displays results in a structured, dynamic table.
+- Designed for scalability and integration with product configuration systems.
