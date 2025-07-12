@@ -6,12 +6,12 @@ import joblib
 import requests
 from datetime import datetime, timedelta
 
-st.set_page_config(page_title="Predikce výroby fotovoltaiky", layout="wide")
-st.title("☀️ Predikce výroby fotovoltaiky")
+st.set_page_config(page_title="PV Output Prediction", layout="wide")
+st.title("☀️ PV Output Prediction")
 
 st.markdown("""
-Tato aplikace predikuje výrobu fotovoltaiky na základě aktuální předpovědi počasí pro Valašské Meziříčí.
-Predikce je zobrazena **od zítřka až do konce dostupné předpovědi**. Pro každý den je možné porovnat predikci s reálnou výrobou stejného dne v loňském roce.
+This application predicts photovoltaic (PV) power output based on the current weather forecast for Valašské Meziříčí.
+The prediction is displayed **from tomorrow until the end of the available forecast**. For each day, you can compare the prediction with the actual output for the same day last year.
 """)
 
 @st.cache_resource
@@ -33,16 +33,16 @@ def load_forecast():
 
 df_forecast = load_forecast()
 
-# --- Filtruj od zítřka dál ---
+#  Filter from tomorrow onwards 
 today = datetime.now().date()
 df_forecast['datetime'] = pd.to_datetime(df_forecast['datetime']).dt.date
 df_pred = df_forecast[df_forecast['datetime'] > today]
 
 if df_pred.empty:
-    st.error("Žádná předpověď od zítřka dál není v datech k dispozici.")
+    st.error("No forecast data available from tomorrow onwards.")
     st.stop()
 
-# Výběr a úprava sloupců
+# Select and preprocess columns for prediction
 columns = [
     'cloudcover', 'datetime', 'dew', 'feelslike', 'feelslikemax', 'feelslikemin', 'humidity',
     'precip', 'precipcover', 'preciptype', 'pressure', 'snow', 'snowdepth', 'solarenergy',
@@ -103,62 +103,134 @@ desired_order = [
 ]
 X_forecast_enc = X_forecast_enc[desired_order]
 
-# Predikce
+# Prediction
 y_pred = model.predict(X_forecast_enc)
 result_df = df_pred[['datetime']].copy()
 result_df['PV(kWh)_pred'] = y_pred
 
-# --- GRAF: Predikovaná výroba ---
-with st.expander("📈 Zobrazit graf predikované výroby", expanded=True):
-    st.markdown("**Predikovaná výroba fotovoltaiky od zítřka dál**")
+#  Load and filter last year's data 
+df_last_year_filtered = pd.DataFrame()
+try:
+    df_last_year = pd.read_csv('Data/SEMS_data.csv', parse_dates=["Datum"])
+    df_last_year['Datum'] = pd.to_datetime(df_last_year['Datum'], dayfirst=True, errors='coerce')
+    
+    # Find the same days and months, but last year
+    days_months = result_df['datetime'].apply(lambda d: (d.month, d.day)).tolist()
+    
+    df_last_year['month'] = df_last_year['Datum'].dt.month
+    df_last_year['day'] = df_last_year['Datum'].dt.day
+    
+    mask = df_last_year.apply(lambda row: (row['month'], row['day']) in days_months, axis=1)
+    df_last_year_filtered = df_last_year[mask].copy() # Use .copy() to prevent SettingWithCopyWarning
+    df_last_year_filtered = df_last_year_filtered.sort_values(by='Datum').reset_index(drop=True)
+
+    # Merge for combined graph
+    # Create a helper column for month and day comparison
+    result_df['month_day'] = result_df['datetime'].apply(lambda d: (d.month, d.day))
+    df_last_year_filtered['month_day'] = df_last_year_filtered['Datum'].apply(lambda d: (d.month, d.day))
+
+    # Merge based on month and day
+    combined_df = pd.merge(result_df, df_last_year_filtered[['month_day', 'PV(kWh)']], on='month_day', how='left')
+    combined_df.rename(columns={'PV(kWh)': 'PV(kWh)_last_year'}, inplace=True)
+    combined_df.drop(columns=['month_day'], inplace=True)
+
+    # Add relative day for combined graph
+    combined_df['relative_day'] = [f"T+{i+1}" for i in range(len(combined_df))]
+
+except Exception as e:
+    st.warning(f"Could not load or process historical data for comparison: {e}")
+    combined_df = result_df.copy()
+    combined_df['PV(kWh)_last_year'] = np.nan
+    combined_df['relative_day'] = [f"T+{i+1}" for i in range(len(combined_df))]
+
+
+#  Display total sums 
+total_pred = result_df["PV(kWh)_pred"].sum()
+total_last_year = df_last_year_filtered["PV(kWh)"].sum() if not df_last_year_filtered.empty else 0
+
+col1, col2 = st.columns(2)
+with col1:
+    st.success(f"**Total Predicted Output:**  {total_pred:.1f} kWh")
+with col2:
+    if total_last_year > 0:
+        st.info(f"**Total Actual Output Last Year (same period):** {total_last_year:.1f} kWh")
+    else:
+        st.warning("Actual output data for comparison last year is not available.")
+
+#  GRAPH 1: Predicted Output 
+with st.expander("📈 Show Predicted Output Graph", expanded=True):
+    st.markdown("### Predicted PV Output from Tomorrow Onwards")
     fig1, ax1 = plt.subplots(figsize=(10, 5))
     ax1.bar(result_df["datetime"].astype(str), result_df["PV(kWh)_pred"], color="#1976D2")
     for x, y in zip(result_df["datetime"].astype(str), result_df["PV(kWh)_pred"]):
         ax1.text(x, y + 0.2, f"{y:.1f}", ha='center', fontsize=9, color='black')
-    ax1.set_xlabel("Datum")
-    ax1.set_ylabel("Predikce PV [kWh]")
-    ax1.set_title("Predikovaná výroba (model)")
+    ax1.set_xlabel("Date")
+    ax1.set_ylabel("Predicted PV [kWh]")
+    ax1.set_title("Predicted Output (Model)")
     ax1.set_ylim(bottom=0)
     plt.xticks(rotation=45)
     plt.tight_layout()
     st.pyplot(fig1)
     st.dataframe(result_df, use_container_width=True)
 
-total_pred = result_df["PV(kWh)_pred"].sum()
-st.success(f"**Celková predikovaná výroba ({result_df['datetime'].min().strftime('%d.%m.%Y')} až {result_df['datetime'].max().strftime('%d.%m.%Y')}): {total_pred:.1f} kWh**")
 
-# --- GRAF: Skutečná výroba loni ---
-with st.expander("📊 Zobrazit graf skutečné výroby loni", expanded=False):
-    st.markdown("**Skutečná výroba za stejné dny v loňském roce (pro srovnání)**")
-    try:
-        df_last_year = pd.read_csv('Data/SEMS_data.csv', parse_dates=["Datum"])
-        df_last_year['Datum'] = pd.to_datetime(df_last_year['Datum'], dayfirst=True, errors='coerce')
-        # Najdi stejné dny a měsíce, ale minulý rok
-        days_months = result_df['datetime'].apply(lambda d: (d.month, d.day)).tolist()
-        df_last_year['month'] = df_last_year['Datum'].dt.month
-        df_last_year['day'] = df_last_year['Datum'].dt.day
-        mask = df_last_year.apply(lambda row: (row['month'], row['day']) in days_months, axis=1)
-        df_last_year_filtered = df_last_year[mask]
-        if not df_last_year_filtered.empty:
-            fig2, ax2 = plt.subplots(figsize=(10, 5))
-            ax2.bar(df_last_year_filtered["Datum"].dt.strftime('%Y-%m-%d'), df_last_year_filtered["PV(kWh)"], color="#43A047")
-            for x, y in zip(df_last_year_filtered["Datum"].dt.strftime('%Y-%m-%d'), df_last_year_filtered["PV(kWh)"]):
-                ax2.text(x, y + 0.2, f"{y:.1f}", ha='center', fontsize=9, color='black')
-            ax2.set_xlabel("Datum")
-            ax2.set_ylabel("Výroba PV [kWh]")
-            ax2.set_title("Skutečná výroba loni")
-            ax2.set_ylim(bottom=0)
-            plt.xticks(rotation=45)
-            plt.tight_layout()
-            st.pyplot(fig2)
-            st.dataframe(df_last_year_filtered[["Datum", "PV(kWh)"]].reset_index(drop=True), use_container_width=True)
-            st.info(f"**Celková skutečná výroba ({df_last_year_filtered['Datum'].min().strftime('%d.%m.%Y')} až {df_last_year_filtered['Datum'].max().strftime('%d.%m.%Y')}): {df_last_year_filtered['PV(kWh)'].sum():.1f} kWh**")
-        else:
-            st.warning("Data o skutečné výrobě pro tyto dny loni nejsou k dispozici.")
-    except Exception as e:
-        st.warning("Nepodařilo se načíst nebo zpracovat historická data pro srovnání.")
 
-# --- Tlačítko pro stažení predikce ---
+#  GRAPH 2: Actual Output Last Year 
+with st.expander("📊 Show Actual Output Last Year Graph", expanded=False):
+    st.markdown("### Actual Output for the Same Days Last Year (for comparison)")
+    if not df_last_year_filtered.empty:
+        fig2, ax2 = plt.subplots(figsize=(10, 5))
+        ax2.bar(df_last_year_filtered["Datum"].dt.strftime('%Y-%m-%d'), df_last_year_filtered["PV(kWh)"], color="#43A047")
+        for x, y in zip(df_last_year_filtered["Datum"].dt.strftime('%Y-%m-%d'), df_last_year_filtered["PV(kWh)"]):
+            ax2.text(x, y + 0.2, f"{y:.1f}", ha='center', fontsize=9, color='black')
+        ax2.set_xlabel("Date")
+        ax2.set_ylabel("PV Output [kWh]")
+        ax2.set_title("Actual Output Last Year")
+        ax2.set_ylim(bottom=0)
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        st.pyplot(fig2)
+        st.dataframe(df_last_year_filtered[["Datum", "PV(kWh)"]].reset_index(drop=True), use_container_width=True)
+    else:
+        st.warning("Actual output data for these days last year is not available.")
+
+
+
+#  GRAPH 3: Combined Comparison 
+with st.expander("📈📊 Show Combined Comparison", expanded=False):
+    st.markdown("### Comparison of Predicted and Actual Output (T+ Days)")
+    if not combined_df.empty:
+        fig3, ax3 = plt.subplots(figsize=(10, 5))
+        
+        # Bar width and position
+        bar_width = 0.35
+        r1 = np.arange(len(combined_df))
+        r2 = [x + bar_width for x in r1]
+
+        ax3.bar(r1, combined_df["PV(kWh)_pred"], color="#1976D2", width=bar_width, label='Predicted PV')
+        ax3.bar(r2, combined_df["PV(kWh)_last_year"], color="#43A047", width=bar_width, label='Last Year PV')
+
+        # Labels on bars
+        for i, (pred_val, last_year_val) in combined_df[['PV(kWh)_pred', 'PV(kWh)_last_year']].iterrows():
+            ax3.text(r1[i], pred_val + 0.2, f"{pred_val:.1f}", ha='center', fontsize=9, color='black')
+            if not pd.isna(last_year_val):
+                ax3.text(r2[i], last_year_val + 0.2, f"{last_year_val:.1f}", ha='center', fontsize=9, color='black')
+
+        ax3.set_xlabel("Relative Day (T+X)")
+        ax3.set_ylabel("PV Output [kWh]")
+        ax3.set_title("Predicted vs. Actual Output Comparison")
+        ax3.set_xticks([r + bar_width / 2 for r in range(len(combined_df))])
+        ax3.set_xticklabels(combined_df['relative_day'])
+        ax3.set_ylim(bottom=0)
+        plt.xticks(rotation=45)
+        plt.legend()
+        plt.tight_layout()
+        st.pyplot(fig3)
+        st.dataframe(combined_df[['datetime', 'relative_day', 'PV(kWh)_pred', 'PV(kWh)_last_year']].reset_index(drop=True), use_container_width=True)
+    else:
+        st.warning("Cannot display combined graph as comparison data is missing.")
+
+#  Download Prediction Button 
 st.markdown("""
     <style>
     .stDownloadButton>button {
@@ -179,8 +251,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.download_button(
-    label="⬇️ Stáhnout CSV s predikcí",
+    label="⬇️ Download CSV with Prediction",
     data=result_df.to_csv(index=False).encode('utf-8'),
-    file_name=f"predikce_pv_{result_df['datetime'].min().strftime('%Y%m%d')}_{result_df['datetime'].max().strftime('%Y%m%d')}.csv",
+    file_name=f"pv_prediction_{result_df['datetime'].min().strftime('%Y%m%d')}_{result_df['datetime'].max().strftime('%Y%m%d')}.csv",
     mime="text/csv"
 )
