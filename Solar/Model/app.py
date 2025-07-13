@@ -111,7 +111,7 @@ result_df['PV(kWh)_pred'] = y_pred
 #  Load and filter last year's data 
 df_last_year_filtered = pd.DataFrame()
 try:
-    df_last_year = pd.read_csv('Data/SEMS_data.csv', parse_dates=["Datum"])
+    df_last_year = pd.read_csv('../Data/SEMS_data.csv', parse_dates=["Datum"])
     df_last_year['Datum'] = pd.to_datetime(df_last_year['Datum'], dayfirst=True, errors='coerce')
     
     # Find the same days and months, but last year
