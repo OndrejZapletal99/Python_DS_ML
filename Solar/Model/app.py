@@ -5,6 +5,13 @@ import matplotlib.pyplot as plt
 import joblib
 import requests
 from datetime import datetime, timedelta
+from pathlib import Path
+
+# --- Model & encoder path setting ---
+script_dir = Path(__file__).parent
+model_path = script_dir / "final_model_gbm.joblib"
+encoder_path = script_dir / "encoder_preciptype.joblib"
+data_path = script_dir / "SEMS_data.csv"
 
 st.set_page_config(page_title="PV Output Prediction", layout="wide")
 st.title("☀️ PV Output Prediction")
@@ -16,8 +23,8 @@ The prediction is displayed **from tomorrow until the end of the available forec
 
 @st.cache_resource
 def load_model_and_encoder():
-    model = joblib.load('final_model_gbm.joblib')
-    encoder = joblib.load('encoder_preciptype.joblib')
+    model = joblib.load(model_path)
+    encoder = joblib.load(encoder_path)
     return model, encoder
 
 model, ohe = load_model_and_encoder()
@@ -111,7 +118,7 @@ result_df['PV(kWh)_pred'] = y_pred
 #  Load and filter last year's data 
 df_last_year_filtered = pd.DataFrame()
 try:
-    df_last_year = pd.read_csv('../Data/SEMS_data.csv', parse_dates=["Datum"])
+    df_last_year = pd.read_csv(data_path, parse_dates=["Datum"])
     df_last_year['Datum'] = pd.to_datetime(df_last_year['Datum'], dayfirst=True, errors='coerce')
     
     # Find the same days and months, but last year
