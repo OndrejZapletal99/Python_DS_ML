@@ -4,6 +4,7 @@ scikit-learn
 joblib
 pathlib
 lightgbm
-numoy
+numpy
 matplotlib
 datetime
+requests
