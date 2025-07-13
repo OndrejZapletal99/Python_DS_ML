@@ -178,7 +178,7 @@ with st.expander("📈 Show Predicted Output Graph", expanded=True):
     plt.xticks(rotation=45)
     plt.tight_layout()
     st.pyplot(fig1)
-    st.dataframe(result_df, use_container_width=True)
+    st.dataframe(result_df[["datetime", "PV(kWh)_pred"]], use_container_width=True)
 
 
 
