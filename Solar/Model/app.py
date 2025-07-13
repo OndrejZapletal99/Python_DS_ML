@@ -16,8 +16,8 @@ The prediction is displayed **from tomorrow until the end of the available forec
 
 @st.cache_resource
 def load_model_and_encoder():
-    model = joblib.load('./Model/final_model_gbm.joblib')
-    encoder = joblib.load('./Model/encoder_preciptype.joblib')
+    model = joblib.load('final_model_gbm.joblib')
+    encoder = joblib.load('encoder_preciptype.joblib')
     return model, encoder
 
 model, ohe = load_model_and_encoder()
