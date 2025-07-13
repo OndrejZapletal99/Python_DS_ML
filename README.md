@@ -10,6 +10,7 @@
   - [Health Insurance Analysis](#health-insurance-analysis)
   - [Heart Disease Prediction](#heart-disease-prediction)
   - [Calculator App](#calculator-app)
+  - [Solar – PV Output Prediction](#solar--pv-output-prediction)
 
 ## Introduction
 
@@ -82,3 +83,20 @@ The `Calculator App` predicts production costs for door and frame products based
 - Uses a pre-trained LightGBM model to predict costs across various batch sizes.
 - Displays results in a structured, dynamic table.
 - Designed for scalability and integration with product configuration systems.
+
+## Solar – PV Output Prediction
+
+The `Solar` project focuses on predicting photovoltaic (PV) power plant output based on current weather forecasts for the Valašské Meziříčí location. It includes an interactive Streamlit web app that allows users to view production predictions from tomorrow up to the end of the available forecast and compare them with actual values from the previous year.
+
+**Key Features:**
+- Automatic loading and processing of current weather forecasts (temperature, cloud cover, precipitation, wind, etc.).
+- Utilizes a pre-trained RandomForest model to predict daily PV output.
+- Comparison of predicted values with real data for the same period last year.
+- Visualization of results in clear charts and tables.
+- Easily extendable to other locations or types of power plants.
+
+**How it works:**
+1. The app loads the latest weather forecast from an API (e.g., Visual Crossing).
+2. Data is preprocessed and encoded using a saved encoder.
+3. The model predicts PV output for each day in the forecast.
+4. Results are displayed in the app and compared with historical data.
