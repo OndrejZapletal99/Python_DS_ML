@@ -13,105 +13,39 @@ model_path = script_dir / "final_model_gbm.joblib"
 encoder_path = script_dir / "encoder_preciptype.joblib"
 data_path = script_dir / "SEMS_data.csv"
 
-# --- Language selection ---
-lang = st.radio("Language / Jazyk", ("English", "Čeština"), horizontal=True)
-
-# --- Text dictionaries ---
+# --- Text dictionary (only English) ---
 TEXT = {
-    "title": {
-        "English": "☀️ PV Output Prediction",
-        "Čeština": "☀️ Predikce výroby FVE"
-    },
-    "intro": {
-        "English": (
-            "This application predicts photovoltaic (PV) power output based on the current weather forecast for Valašské Meziříčí.\n"
-            "The prediction is displayed **from tomorrow until the end of the available forecast**. For each day, you can compare the prediction with the actual output for the same day last year."
-        ),
-        "Čeština": (
-            "Tato aplikace predikuje výrobu fotovoltaické elektrárny (FVE) na základě aktuální předpovědi počasí pro Valašské Meziříčí.\n"
-            "Predikce je zobrazena **od zítřka do konce dostupné předpovědi**. Pro každý den můžete porovnat predikci se skutečnou výrobou za stejný den minulého roku."
-        )
-    },
-    "total_pred": {
-        "English": "**Total Predicted Output:**  {val:.1f} kWh",
-        "Čeština": "**Celková predikovaná výroba:**  {val:.1f} kWh"
-    },
-    "total_actual": {
-        "English": "**Total Actual Output Last Year (same period):** {val:.1f} kWh",
-        "Čeština": "**Skutečná výroba minulý rok (stejné období):** {val:.1f} kWh"
-    },
-    "total_actual_missing": {
-        "English": "Actual output data for comparison last year is not available.",
-        "Čeština": "Skutečná data pro porovnání za minulý rok nejsou k dispozici."
-    },
-    "graph1_title": {
-        "English": "Predicted PV Output from Tomorrow Onwards",
-        "Čeština": "Predikovaná výroba FVE od zítřka"
-    },
-    "graph1_ylabel": {
-        "English": "Predicted PV [kWh]",
-        "Čeština": "Predikovaná výroba [kWh]"
-    },
-    "graph1_xtitle": {
-        "English": "Date",
-        "Čeština": "Datum"
-    },
-    "graph1_tab": {
-        "English": "📈 Show Predicted Output Graph",
-        "Čeština": "📈 Zobrazit graf predikované výroby"
-    },
-    "graph2_title": {
-        "English": "Actual Output for the Same Days Last Year (for comparison)",
-        "Čeština": "Skutečná výroba za stejné dny minulého roku (pro porovnání)"
-    },
-    "graph2_ylabel": {
-        "English": "PV Output [kWh]",
-        "Čeština": "Výroba FVE [kWh]"
-    },
-    "graph2_xtitle": {
-        "English": "Date",
-        "Čeština": "Datum"
-    },
-    "graph2_tab": {
-        "English": "📊 Show Actual Output Last Year Graph",
-        "Čeština": "📊 Zobrazit graf skutečné výroby minulý rok"
-    },
-    "graph2_missing": {
-        "English": "Actual output data for these days last year is not available.",
-        "Čeština": "Skutečná data pro tyto dny minulého roku nejsou k dispozici."
-    },
-    "graph3_title": {
-        "English": "Comparison of Predicted and Actual Output (T+ Days)",
-        "Čeština": "Porovnání predikované a skutečné výroby (T+ dny)"
-    },
-    "graph3_ylabel": {
-        "English": "PV Output [kWh]",
-        "Čeština": "Výroba FVE [kWh]"
-    },
-    "graph3_xtitle": {
-        "English": "Relative Day (T+X)",
-        "Čeština": "Relativní den (T+X)"
-    },
-    "graph3_tab": {
-        "English": "📈📊 Show Combined Comparison",
-        "Čeština": "📈📊 Zobrazit kombinované porovnání"
-    },
-    "graph3_missing": {
-        "English": "Cannot display combined graph as comparison data is missing.",
-        "Čeština": "Nelze zobrazit kombinovaný graf, protože chybí data pro porovnání."
-    },
-    "download": {
-        "English": "⬇️ Download CSV with Prediction",
-        "Čeština": "⬇️ Stáhnout CSV s predikcí"
-    }
+    "title": "☀️ PV Output Prediction",
+    "intro": (
+        "This application predicts photovoltaic (PV) power output based on the current weather forecast for Valašské Meziříčí.\n"
+        "The prediction is displayed **from tomorrow until the end of the available forecast**. For each day, you can compare the prediction with the actual output for the same day last year."
+    ),
+    "total_pred": "**Total Predicted Output:** {val:.1f} kWh",
+    "total_actual": "**Total Actual Output Last Year (same period):** {val:.1f} kWh",
+    "total_actual_missing": "Actual output data for comparison last year is not available.",
+    "graph1_title": "Predicted PV Output from Tomorrow Onwards",
+    "graph1_ylabel": "Predicted PV [kWh]",
+    "graph1_xtitle": "Date",
+    "graph1_tab": "📈 Show Predicted Output Graph",
+    "graph2_title": "Actual Output for the Same Days Last Year (for comparison)",
+    "graph2_ylabel": "PV Output [kWh]",
+    "graph2_xtitle": "Date",
+    "graph2_tab": "📊 Show Actual Output Last Year Graph",
+    "graph2_missing": "Actual output data for these days last year is not available.",
+    "graph3_title": "Comparison of Predicted and Actual Output (T+ Days)",
+    "graph3_ylabel": "PV Output [kWh]",
+    "graph3_xtitle": "Relative Day (T+X)",
+    "graph3_tab": "📈📊 Show Combined Comparison",
+    "graph3_missing": "Cannot display combined graph as comparison data is missing.",
+    "download": "⬇️ Download CSV with Prediction"
 }
 
 # --- Page config and header ---
-st.set_page_config(page_title=TEXT["title"][lang], layout="wide")
-st.title(TEXT["title"][lang])
-st.markdown(TEXT["intro"][lang])
+st.set_page_config(page_title=TEXT["title"], layout="wide")
+st.title(TEXT["title"])
+st.markdown(TEXT["intro"])
 
-@st.cache_resource
+@st.cache_resource(ttl=3600) # Cache will reset every hour
 def load_model_and_encoder():
     model = joblib.load(model_path)
     encoder = joblib.load(encoder_path)
@@ -119,9 +53,9 @@ def load_model_and_encoder():
 
 model, ohe = load_model_and_encoder()
 
-@st.cache_data
+@st.cache_data(ttl=3600) # Cache will reset every hour
 def load_forecast():
-    url = "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/Vala%C5%A1sk%C3%A9%20Mezi%C5%99%C3%AD%C4%8D%C3%AD%2C%20Zl%C3%ADnsk%C3%BD%20kraj%2C%20%C4%8Cesk%C3%A1%20Republika?unitGroup=metric&include=days&key=H5X3D8N2WKAAQ68QDPHD5UA8J&contentType=json"
+    url = "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/Vala%C5%A1sk%C3%A9%20Mezi%C5%99%C3%AD%C4%8D%C3%AD%2C%20Zl%C3%ADnsk%C3%BD%20kraj%2C%20%C4%8Ceska%CC%81%20Republika?unitGroup=metric&include=days&key=H5X3D8N2WKAAQ68QDPHD5UA8J&contentType=json"
     response = requests.get(url)
     data = response.json()
     days = data.get("days", [])
@@ -130,7 +64,7 @@ def load_forecast():
 
 df_forecast = load_forecast()
 
-#  Filter from tomorrow onwards 
+# Filter from tomorrow onwards
 today = datetime.now().date()
 df_forecast['datetime'] = pd.to_datetime(df_forecast['datetime']).dt.date
 df_pred = df_forecast[df_forecast['datetime'] > today]
@@ -205,7 +139,7 @@ y_pred = model.predict(X_forecast_enc)
 result_df = df_pred[['datetime']].copy()
 result_df['PV(kWh)_pred'] = y_pred
 
-#  Load and filter last year's data 
+# Load and filter last year's data
 df_last_year_filtered = pd.DataFrame()
 try:
     df_last_year = pd.read_csv(data_path, parse_dates=["Datum"])
@@ -241,71 +175,71 @@ except Exception as e:
     combined_df['relative_day'] = [f"T+{i+1}" for i in range(len(combined_df))]
 
 
-#  Display total sums 
+# Display total sums
 total_pred = result_df["PV(kWh)_pred"].sum()
 total_last_year = df_last_year_filtered["PV(kWh)"].sum() if not df_last_year_filtered.empty else 0
 
 col1, col2 = st.columns(2)
 with col1:
-    st.success(TEXT["total_pred"][lang].format(val=total_pred))
+    st.success(TEXT["total_pred"].format(val=total_pred))
 with col2:
     if total_last_year > 0:
-        st.info(TEXT["total_actual"][lang].format(val=total_last_year))
+        st.info(TEXT["total_actual"].format(val=total_last_year))
     else:
-        st.warning(TEXT["total_actual_missing"][lang])
+        st.warning(TEXT["total_actual_missing"])
 
-#  GRAPH 1: Predicted Output 
-with st.expander(TEXT["graph1_tab"][lang], expanded=True):
-    st.markdown(f"### {TEXT['graph1_title'][lang]}")
+# GRAPH 1: Predicted Output
+with st.expander(TEXT["graph1_tab"], expanded=True):
+    st.markdown(f"### {TEXT['graph1_title']}")
     fig1, ax1 = plt.subplots(figsize=(10, 5))
     ax1.bar(result_df["datetime"].astype(str), result_df["PV(kWh)_pred"], color="#1976D2")
     for x, y in zip(result_df["datetime"].astype(str), result_df["PV(kWh)_pred"]):
         ax1.text(x, y + 0.2, f"{y:.1f}", ha='center', fontsize=9, color='black')
-    ax1.set_xlabel(TEXT["graph1_xtitle"][lang])
-    ax1.set_ylabel(TEXT["graph1_ylabel"][lang])
-    ax1.set_title(TEXT["graph1_title"][lang])
+    ax1.set_xlabel(TEXT["graph1_xtitle"])
+    ax1.set_ylabel(TEXT["graph1_ylabel"])
+    ax1.set_title(TEXT["graph1_title"])
     ax1.set_ylim(bottom=0)
     plt.xticks(rotation=45)
     plt.tight_layout()
     st.pyplot(fig1)
     st.dataframe(result_df[["datetime", "PV(kWh)_pred"]], use_container_width=True)
 
-#  GRAPH 2: Actual Output Last Year 
-with st.expander(TEXT["graph2_tab"][lang], expanded=False):
-    st.markdown(f"### {TEXT['graph2_title'][lang]}")
+# GRAPH 2: Actual Output Last Year
+with st.expander(TEXT["graph2_tab"], expanded=False):
+    st.markdown(f"### {TEXT['graph2_title']}")
     if not df_last_year_filtered.empty:
         fig2, ax2 = plt.subplots(figsize=(10, 5))
         ax2.bar(df_last_year_filtered["Datum"].dt.strftime('%Y-%m-%d'), df_last_year_filtered["PV(kWh)"], color="#43A047")
         for x, y in zip(df_last_year_filtered["Datum"].dt.strftime('%Y-%m-%d'), df_last_year_filtered["PV(kWh)"]):
             ax2.text(x, y + 0.2, f"{y:.1f}", ha='center', fontsize=9, color='black')
-        ax2.set_xlabel(TEXT["graph2_xtitle"][lang])
-        ax2.set_ylabel(TEXT["graph2_ylabel"][lang])
-        ax2.set_title(TEXT["graph2_title"][lang])
+        ax2.set_xlabel(TEXT["graph2_xtitle"])
+        ax2.set_ylabel(TEXT["graph2_ylabel"])
+        ax2.set_title(TEXT["graph2_title"])
         ax2.set_ylim(bottom=0)
         plt.xticks(rotation=45)
         plt.tight_layout()
         st.pyplot(fig2)
         st.dataframe(df_last_year_filtered[["Datum", "PV(kWh)"]].reset_index(drop=True), use_container_width=True)
     else:
-        st.warning(TEXT["graph2_missing"][lang])
+        st.warning(TEXT["graph2_missing"])
 
-#  GRAPH 3: Combined Comparison 
-with st.expander(TEXT["graph3_tab"][lang], expanded=False):
-    st.markdown(f"### {TEXT['graph3_title'][lang]}")
+# GRAPH 3: Combined Comparison
+with st.expander(TEXT["graph3_tab"], expanded=False):
+    st.markdown(f"### {TEXT['graph3_title']}")
     if not combined_df.empty:
         fig3, ax3 = plt.subplots(figsize=(10, 5))
         bar_width = 0.35
         r1 = np.arange(len(combined_df))
         r2 = [x + bar_width for x in r1]
-        ax3.bar(r1, combined_df["PV(kWh)_pred"], color="#1976D2", width=bar_width, label='Predicted PV' if lang == "English" else "Predikce FVE")
-        ax3.bar(r2, combined_df["PV(kWh)_last_year"], color="#43A047", width=bar_width, label='Last Year PV' if lang == "English" else "Minulý rok FVE")
+        ax3.bar(r1, combined_df["PV(kWh)_pred"], color="#1976D2", width=bar_width, label='Predicted PV')
+        ax3.bar(r2, combined_df["PV(kWh)_last_year"], color="#43A047", width=bar_width, label='Last Year PV')
         for i, (pred_val, last_year_val) in combined_df[['PV(kWh)_pred', 'PV(kWh)_last_year']].iterrows():
             ax3.text(r1[i], pred_val + 0.2, f"{pred_val:.1f}", ha='center', fontsize=9, color='black')
             if not pd.isna(last_year_val):
                 ax3.text(r2[i], last_year_val + 0.2, f"{last_year_val:.1f}", ha='center', fontsize=9, color='black')
-        ax3.set_xlabel(TEXT["graph3_xtitle"][lang])
-        ax3.set_ylabel(TEXT["graph3_ylabel"][lang])
-        ax3.set_title(TEXT["graph3_title"][lang])
+        ax3.set_xlabel(TEXT["graph3_xtitle"])
+        ax3.set_ylabel(TEXT["graph3_ylabel"])
+        ax3.set_title(TEXT["graph3_title"])
         ax3.set_xticks([r + bar_width / 2 for r in range(len(combined_df))])
         ax3.set_xticklabels(combined_df['relative_day'])
         ax3.set_ylim(bottom=0)
@@ -315,14 +249,12 @@ with st.expander(TEXT["graph3_tab"][lang], expanded=False):
         st.pyplot(fig3)
         st.dataframe(combined_df[['datetime', 'relative_day', 'PV(kWh)_pred', 'PV(kWh)_last_year']].reset_index(drop=True), use_container_width=True)
     else:
-        st.warning(TEXT["graph3_missing"][lang])
+        st.warning(TEXT["graph3_missing"])
 
-#  Download Prediction Button 
+# Download Prediction Button
 st.download_button(
-    label=TEXT["download"][lang],
+    label=TEXT["download"],
     data=result_df.to_csv(index=False).encode('utf-8'),
     file_name=f"pv_prediction_{result_df['datetime'].min().strftime('%Y%m%d')}_{result_df['datetime'].max().strftime('%Y%m%d')}.csv",
     mime="text/csv"
 )
-
-#
