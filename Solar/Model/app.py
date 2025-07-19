@@ -12,6 +12,7 @@ script_dir = Path(__file__).parent
 model_path = script_dir / "final_model_gbm.joblib"
 encoder_path = script_dir / "encoder_preciptype.joblib"
 data_path = script_dir / "SEMS_data.csv"
+history_data_path = script_dir / "prediction_history.csv" # Path to historical prediction data
 
 # --- Text dictionary (only English) ---
 TEXT = {
@@ -26,18 +27,26 @@ TEXT = {
     "graph1_title": "Predicted PV Output from Tomorrow Onwards",
     "graph1_ylabel": "Predicted PV [kWh]",
     "graph1_xtitle": "Date",
-    "graph1_tab": "📈 Show Predicted Output Graph",
+    "graph1_tab": "📈 Predicted Output Graph", # Simplified for subheader
     "graph2_title": "Actual Output for the Same Days Last Year (for comparison)",
     "graph2_ylabel": "PV Output [kWh]",
     "graph2_xtitle": "Date",
-    "graph2_tab": "📊 Show Actual Output Last Year Graph",
-    "graph2_missing": "Actual output data for these days last year is not available.",
+    "graph2_tab": "📊 Actual Output Last Year Graph", # Simplified for subheader
     "graph3_title": "Comparison of Predicted and Actual Output (T+ Days)",
     "graph3_ylabel": "PV Output [kWh]",
     "graph3_xtitle": "Relative Day (T+X)",
-    "graph3_tab": "📈📊 Show Combined Comparison",
+    "graph3_tab": "📈📊 Combined Comparison Graph", # Simplified for subheader
     "graph3_missing": "Cannot display combined graph as comparison data is missing.",
-    "download": "⬇️ Download CSV with Prediction"
+    "download": "⬇️ Download CSV with Prediction",
+    # --- New texts for Evaluation section ---
+    "evaluation_section_title": "📊 Prediction Evaluation",
+    "evaluation_intro": "Here you can analyze how the predicted PV output for a specific future date has changed over time. Select a date to see its prediction history.",
+    "select_date_label": "Select Date to Evaluate:",
+    "evaluation_graph_title": "Historical Prediction for {selected_date}",
+    "evaluation_graph_ylabel": "Predicted PV [kWh]",
+    "evaluation_graph_xtitle": "Prediction Download Date",
+    "evaluation_data_missing": "No historical prediction data available for the selected date or file not found.",
+    "evaluation_file_error": "Could not load historical prediction data. Please ensure 'prediction_history.csv' exists and is correctly formatted."
 }
 
 # --- Page config and header ---
@@ -45,16 +54,18 @@ st.set_page_config(page_title=TEXT["title"], layout="wide")
 st.title(TEXT["title"])
 st.markdown(TEXT["intro"])
 
-@st.cache_resource(ttl=3600) # Cache will reset every hour
+@st.cache_resource(ttl=3600) # Cache will reset every hour for model and encoder
 def load_model_and_encoder():
+    """Loads the pre-trained model and OneHotEncoder."""
     model = joblib.load(model_path)
     encoder = joblib.load(encoder_path)
     return model, encoder
 
 model, ohe = load_model_and_encoder()
 
-@st.cache_data(ttl=3600) # Cache will reset every hour
+@st.cache_data(ttl=3600) # Cache will reset every hour for forecast data
 def load_forecast():
+    """Fetches weather forecast data from Visual Crossing API."""
     url = "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/Vala%C5%A1sk%C3%A9%20Mezi%C5%99%C3%AD%C4%8D%C3%AD%2C%20Zl%C3%ADnsk%C3%BD%20kraj%2C%20%C4%8Ceska%CC%81%20Republika?unitGroup=metric&include=days&key=H5X3D8N2WKAAQ68QDPHD5UA8J&contentType=json"
     response = requests.get(url)
     data = response.json()
@@ -64,7 +75,7 @@ def load_forecast():
 
 df_forecast = load_forecast()
 
-# Filter from tomorrow onwards
+# Filter forecast data from tomorrow onwards
 today = datetime.now().date()
 df_forecast['datetime'] = pd.to_datetime(df_forecast['datetime']).dt.date
 df_pred = df_forecast[df_forecast['datetime'] > today]
@@ -91,6 +102,7 @@ df_forecast_filtered['cos_dayofyear'] = np.cos(2 * np.pi * df_forecast_filtered[
 df_forecast_filtered['year'] = df_forecast_filtered['datetime'].dt.year
 
 def time_to_seconds(t):
+    """Converts a time string (HH:MM:SS) to total seconds."""
     h, m, s = map(int, t.split(':'))
     return h*3600 + m*60 + s
 
@@ -110,6 +122,7 @@ df_forecast_final = df_forecast_final.drop(columns=['datetime'])
 df_forecast_final['preciptype'] = df_forecast_final['preciptype'].fillna("['none']").apply(str)
 
 def encode_precip(df, ohe):
+    """Applies OneHotEncoding to 'preciptype' column."""
     df = df.copy()
     encoded = ohe.transform(df[['preciptype']])
     encoded_df = pd.DataFrame(
@@ -139,7 +152,7 @@ y_pred = model.predict(X_forecast_enc)
 result_df = df_pred[['datetime']].copy()
 result_df['PV(kWh)_pred'] = y_pred
 
-# Load and filter last year's data
+# Load and filter last year's data for comparison
 df_last_year_filtered = pd.DataFrame()
 try:
     df_last_year = pd.read_csv(data_path, parse_dates=["Datum"])
@@ -188,9 +201,14 @@ with col2:
     else:
         st.warning(TEXT["total_actual_missing"])
 
-# GRAPH 1: Predicted Output
-with st.expander(TEXT["graph1_tab"], expanded=True):
-    st.markdown(f"### {TEXT['graph1_title']}")
+# Main expander for "Prediction Results" section
+with st.expander("Forecasted PV Output & Comparison", expanded=True):
+    st.markdown("Here you can see the predicted PV output for the upcoming days and compare it with last year's actual output.")
+    
+    # Sub-section for Predicted Output Graph (using subheader and markdown separator)
+    st.markdown("---") 
+    st.subheader(TEXT["graph1_tab"]) 
+    st.markdown(f"#### {TEXT['graph1_title']}") 
     fig1, ax1 = plt.subplots(figsize=(10, 5))
     ax1.bar(result_df["datetime"].astype(str), result_df["PV(kWh)_pred"], color="#1976D2")
     for x, y in zip(result_df["datetime"].astype(str), result_df["PV(kWh)_pred"]):
@@ -204,9 +222,10 @@ with st.expander(TEXT["graph1_tab"], expanded=True):
     st.pyplot(fig1)
     st.dataframe(result_df[["datetime", "PV(kWh)_pred"]], use_container_width=True)
 
-# GRAPH 2: Actual Output Last Year
-with st.expander(TEXT["graph2_tab"], expanded=False):
-    st.markdown(f"### {TEXT['graph2_title']}")
+    # Sub-section for Actual Output Last Year Graph
+    st.markdown("---") 
+    st.subheader(TEXT["graph2_tab"]) 
+    st.markdown(f"#### {TEXT['graph2_title']}") 
     if not df_last_year_filtered.empty:
         fig2, ax2 = plt.subplots(figsize=(10, 5))
         ax2.bar(df_last_year_filtered["Datum"].dt.strftime('%Y-%m-%d'), df_last_year_filtered["PV(kWh)"], color="#43A047")
@@ -223,9 +242,10 @@ with st.expander(TEXT["graph2_tab"], expanded=False):
     else:
         st.warning(TEXT["graph2_missing"])
 
-# GRAPH 3: Combined Comparison
-with st.expander(TEXT["graph3_tab"], expanded=False):
-    st.markdown(f"### {TEXT['graph3_title']}")
+    # Sub-section for Combined Comparison Graph
+    st.markdown("---") 
+    st.subheader(TEXT["graph3_tab"]) 
+    st.markdown(f"#### {TEXT['graph3_title']}") 
     if not combined_df.empty:
         fig3, ax3 = plt.subplots(figsize=(10, 5))
         bar_width = 0.35
@@ -251,10 +271,88 @@ with st.expander(TEXT["graph3_tab"], expanded=False):
     else:
         st.warning(TEXT["graph3_missing"])
 
-# Download Prediction Button
+# Download Prediction Button (green color)
 st.download_button(
     label=TEXT["download"],
     data=result_df.to_csv(index=False).encode('utf-8'),
     file_name=f"pv_prediction_{result_df['datetime'].min().strftime('%Y%m%d')}_{result_df['datetime'].max().strftime('%Y%m%d')}.csv",
-    mime="text/csv"
+    mime="text/csv",
+    help="Click to download the predicted PV output as a CSV file.",
+    type="primary" # 'primary' sets the button to the theme's primary color (often green or blue)
 )
+
+
+## 📊 Prediction Evaluation
+
+st.markdown("---") # Separator for the new section
+st.header(TEXT["evaluation_section_title"])
+st.markdown(TEXT["evaluation_intro"])
+
+@st.cache_data(ttl=3600)
+def load_prediction_history():
+    """Loads and preprocesses the prediction history data."""
+    try:
+        df_history = pd.read_csv(history_data_path, parse_dates=["datetime", "DownloadDate"])
+        # Convert datetime columns to date type for comparison without time
+        df_history['datetime'] = df_history['datetime'].dt.date
+        df_history['DownloadDate'] = df_history['DownloadDate'].dt.date
+        return df_history
+    except FileNotFoundError:
+        st.error(TEXT["evaluation_file_error"])
+        return pd.DataFrame()
+    except Exception as e:
+        st.error(f"{TEXT['evaluation_file_error']} Error: {e}")
+        return pd.DataFrame()
+
+df_history = load_prediction_history()
+
+# Main expander for "Evaluation" section
+with st.expander("View Historical Prediction Changes", expanded=True):
+    if not df_history.empty:
+        # Get unique dates for selection from history (dates for which predictions exist)
+        unique_prediction_dates = sorted(df_history['datetime'].unique())
+        
+        if unique_prediction_dates:
+            # Convert dates to string for display in the selectbox
+            selected_date_str = st.selectbox(
+                TEXT["select_date_label"],
+                options=[d.strftime('%Y-%m-%d') for d in unique_prediction_dates]
+            )
+            selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+
+            # Sub-section for the historical graph (using subheader and markdown separator)
+            st.markdown("---")
+            st.subheader(TEXT["evaluation_graph_title"].format(selected_date=selected_date_str)) 
+            
+            # Filter history for the selected date
+            filtered_history = df_history[df_history['datetime'] == selected_date].copy()
+            
+            if not filtered_history.empty:
+                # Display the graph
+                fig_eval, ax_eval = plt.subplots(figsize=(10, 5))
+                ax_eval.plot(
+                    filtered_history["DownloadDate"].astype(str),
+                    filtered_history["PV(kWh)_pred"],
+                    marker='o',
+                    color='#FF8C00' # Orange color for history graph
+                )
+                for x, y in zip(filtered_history["DownloadDate"].astype(str), filtered_history["PV(kWh)_pred"]):
+                    ax_eval.text(x, y + 0.2, f"{y:.1f}", ha='center', fontsize=9, color='black')
+                
+                ax_eval.set_xlabel(TEXT["evaluation_graph_xtitle"])
+                ax_eval.set_ylabel(TEXT["evaluation_graph_ylabel"])
+                ax_eval.set_title(TEXT["evaluation_graph_title"].format(selected_date=selected_date_str))
+                ax_eval.set_ylim(bottom=0)
+                plt.xticks(rotation=45)
+                plt.grid(True, linestyle='--', alpha=0.7)
+                plt.tight_layout()
+                st.pyplot(fig_eval)
+                
+                # Display data in a table
+                st.dataframe(filtered_history[['DownloadDate', 'PV(kWh)_pred']].sort_values(by='DownloadDate', ascending=False).reset_index(drop=True), use_container_width=True)
+            else:
+                st.warning(TEXT["evaluation_data_missing"])
+        else:
+            st.warning(TEXT["evaluation_data_missing"])
+    else:
+        st.warning(TEXT["evaluation_data_missing"])
