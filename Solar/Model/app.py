@@ -329,22 +329,43 @@ with st.expander("View Historical Prediction Changes", expanded=True):
             
             if not filtered_history.empty:
                 # Display the graph
+                # --- Vykreslení grafu s reálnou hodnotou ---
                 fig_eval, ax_eval = plt.subplots(figsize=(10, 5))
+
+                # Predikce v čase
                 ax_eval.plot(
                     filtered_history["DownloadDate"].astype(str),
                     filtered_history["PV(kWh)_pred"],
                     marker='o',
-                    color='#FF8C00' # Orange color for history graph
+                    color='#FF8C00',
+                    label="Predicted PV"
                 )
+
+                # 🟢 Načti reálnou hodnotu z SEMS_data.csv
+                try:
+                    df_actual = pd.read_csv(data_path, parse_dates=["Datum"])
+                    df_actual['Datum'] = pd.to_datetime(df_actual['Datum'], dayfirst=True, errors='coerce')
+                    actual_value_row = df_actual[df_actual['Datum'].dt.date == selected_date]
+
+                    if not actual_value_row.empty:
+                        actual_val = actual_value_row['PV(kWh)'].values[0]
+                        ax_eval.axhline(y=actual_val, color='green', linestyle='--', linewidth=2, label=f"Actual PV = {actual_val:.1f} kWh")
+                    else:
+                        st.info("No actual data found for the selected date.")
+                except Exception as e:
+                    st.warning(f"Error loading actual production data: {e}")
+
+                # Formátování grafu
                 for x, y in zip(filtered_history["DownloadDate"].astype(str), filtered_history["PV(kWh)_pred"]):
                     ax_eval.text(x, y + 0.2, f"{y:.1f}", ha='center', fontsize=9, color='black')
-                
+
                 ax_eval.set_xlabel(TEXT["evaluation_graph_xtitle"])
                 ax_eval.set_ylabel(TEXT["evaluation_graph_ylabel"])
                 ax_eval.set_title(TEXT["evaluation_graph_title"].format(selected_date=selected_date_str))
                 ax_eval.set_ylim(bottom=0)
                 plt.xticks(rotation=45)
                 plt.grid(True, linestyle='--', alpha=0.7)
+                ax_eval.legend()
                 plt.tight_layout()
                 st.pyplot(fig_eval)
                 
